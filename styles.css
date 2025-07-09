@@ -501,6 +501,37 @@ input:checked + .slider:before {
   z-index: 1;
 }
 
+.falling-character-container {
+  pointer-events: none;
+  z-index: 999;
+}
+
+.parachute {
+  animation: parachute-sway 2s ease-in-out infinite alternate;
+}
+
+@keyframes parachute-sway {
+  0% {
+    transform: translateX(-50%) rotate(-2deg);
+  }
+  100% {
+    transform: translateX(-50%) rotate(2deg);
+  }
+}
+
+.parachute-strings {
+  animation: string-sway 2s ease-in-out infinite alternate;
+}
+
+@keyframes string-sway {
+  0% {
+    transform: translateX(-50%) rotate(-1deg);
+  }
+  100% {
+    transform: translateX(-50%) rotate(1deg);
+  }
+}
+
 .falling-character {
   position: absolute;
   width: 40px;
@@ -515,8 +546,6 @@ input:checked + .slider:before {
   font-size: 18px;
   color: white;
   text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
-  animation: fall linear forwards;
-  z-index: 999;
 }
 
 .falling-character::before {
@@ -524,39 +553,33 @@ input:checked + .slider:before {
   font-size: 20px;
 }
 
-@keyframes fall {
-  from {
-    transform: translateY(-100px) rotate(0deg);
-  }
-  to {
-    transform: translateY(100vh) rotate(360deg);
-  }
+#obs-url-display {
+  background: var(--chat-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 10px;
+  margin-top: 10px;
 }
 
-.score-popup {
-  position: fixed;
-  font-size: 32px;
-  font-weight: bold;
-  color: #4caf50;
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
-  z-index: 1001;
-  pointer-events: none;
-  animation: scorePopup 2s ease-out forwards;
+#obs-url-display input {
+  background: var(--container-bg);
+  color: var(--text-color);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
 }
 
-@keyframes scorePopup {
-  0% {
-    opacity: 1;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1.5);
-  }
-  100% {
-    opacity: 0;
-    transform: scale(1) translateY(-100px);
-  }
+#obs-url-display button {
+  background: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  padding: 5px 10px;
+  margin-top: 5px;
+}
+
+#obs-url-display button:hover {
+  background: var(--primary-hover);
 }
 
 .game-controls {

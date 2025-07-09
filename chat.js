@@ -166,6 +166,9 @@ function resetGame() {
   
   // Clear all falling characters
   fallingCharacters.forEach(char => {
+    if (char.animationId) {
+      cancelAnimationFrame(char.animationId);
+    }
     if (char.element && char.element.parentNode) {
       char.element.parentNode.removeChild(char.element);
     }
@@ -198,57 +201,187 @@ function handleDropCommand(username) {
   // Add to game overlay
   gameOverlay.appendChild(character.element);
   
-  // Calculate hit chance and trajectory
+  // Calculate hit chance and physics
   const hitChance = 0.3; // 30% chance to hit
   const willHit = Math.random() < hitChance;
   
-  if (willHit) {
-    // Aim for target
-    const targetRect = gameTarget.getBoundingClientRect();
-    const targetCenterX = targetRect.left + targetRect.width / 2;
-    character.targetX = targetCenterX;
-  } else {
-    // Random position
-    character.targetX = Math.random() * window.innerWidth;
-  }
+  // Random starting position across screen width
+  const startX = Math.random() * (window.innerWidth - 80) + 40;
+  character.x = startX;
+  character.y = -150;
+  character.velocityX = (Math.random() - 0.5) * 2; // Random horizontal drift
+  character.velocityY = 0.8 + Math.random() * 0.4; // Slow fall speed
+  character.gravity = 0.02;
+  character.bounce = 0.7;
+  character.drag = 0.98;
   
   // Set initial position
-  character.element.style.left = character.targetX + 'px';
-  character.element.style.top = '-100px';
+  character.element.style.left = character.x + 'px';
+  character.element.style.top = character.y + 'px';
   
-  // Start animation
-  const fallDuration = 3000 + Math.random() * 2000; // 3-5 seconds
-  character.element.style.animationDuration = fallDuration + 'ms';
+  // Remove CSS animation and use JS physics
+  character.element.style.animation = 'none';
   
-  // Check for hit after animation
-  setTimeout(() => {
-    checkHit(character);
-  }, fallDuration);
+  // Start physics simulation
+  character.animationId = requestAnimationFrame(() => animateCharacter(character));
   
   updateGameStats();
 }
 
-// Create falling character element
+// Create falling character element with parachute
 function createFallingCharacter(username) {
-  const element = document.createElement('div');
-  element.className = 'falling-character';
-  element.title = username;
+  const container = document.createElement('div');
+  container.className = 'falling-character-container';
+  container.style.position = 'absolute';
+  container.style.width = '60px';
+  container.style.height = '80px';
   
-  // Add username initial or emoji
+  // Create parachute
+  const parachute = document.createElement('div');
+  parachute.className = 'parachute';
+  parachute.style.position = 'absolute';
+  parachute.style.top = '0px';
+  parachute.style.left = '50%';
+  parachute.style.transform = 'translateX(-50%)';
+  parachute.style.width = '50px';
+  parachute.style.height = '25px';
+  parachute.style.background = 'linear-gradient(135deg, #ff6b6b 0%, #ff5252 50%, #f44336 100%)';
+  parachute.style.borderRadius = '50% 50% 50% 50% / 60% 60% 40% 40%';
+  parachute.style.border = '2px solid #fff';
+  parachute.style.boxShadow = '0 2px 10px rgba(0, 0, 0, 0.3)';
+  
+  // Create parachute strings
+  const strings = document.createElement('div');
+  strings.className = 'parachute-strings';
+  strings.style.position = 'absolute';
+  strings.style.top = '20px';
+  strings.style.left = '50%';
+  strings.style.transform = 'translateX(-50%)';
+  strings.style.width = '2px';
+  strings.style.height = '15px';
+  strings.style.background = '#333';
+  strings.style.opacity = '0.7';
+  
+  // Create character
+  const character = document.createElement('div');
+  character.className = 'falling-character';
+  character.style.position = 'absolute';
+  character.style.bottom = '0px';
+  character.style.left = '50%';
+  character.style.transform = 'translateX(-50%)';
+  character.style.width = '30px';
+  character.style.height = '30px';
+  character.style.background = 'linear-gradient(135deg, #ff9800 0%, #ff5722 100%)';
+  character.style.borderRadius = '50%';
+  character.style.border = '2px solid #fff';
+  character.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.3)';
+  character.style.display = 'flex';
+  character.style.alignItems = 'center';
+  character.style.justifyContent = 'center';
+  character.style.fontSize = '12px';
+  character.style.color = 'white';
+  character.style.textShadow = '1px 1px 2px rgba(0, 0, 0, 0.5)';
+  character.style.fontWeight = 'bold';
+  
+  // Add username initial
   const initial = username.charAt(0).toUpperCase();
-  element.textContent = initial;
+  character.textContent = initial;
   
   // Random colors
   const colors = ['#ff9800', '#2196f3', '#4caf50', '#e91e63', '#9c27b0', '#ff5722'];
   const color = colors[Math.floor(Math.random() * colors.length)];
-  element.style.background = `linear-gradient(135deg, ${color} 0%, ${color}99 100%)`;
+  character.style.background = `linear-gradient(135deg, ${color} 0%, ${color}99 100%)`;
+  parachute.style.background = `linear-gradient(135deg, ${color} 0%, ${color}CC 50%, ${color}99 100%)`;
+  
+  // Assemble the falling unit
+  container.appendChild(parachute);
+  container.appendChild(strings);
+  container.appendChild(character);
   
   return {
-    element: element,
+    element: container,
     username: username,
-    targetX: 0,
-    hit: false
+    x: 0,
+    y: 0,
+    velocityX: 0,
+    velocityY: 0,
+    gravity: 0.02,
+    bounce: 0.7,
+    drag: 0.98,
+    hit: false,
+    animationId: null
   };
+}
+
+// Animate character with physics
+function animateCharacter(character) {
+  // Apply gravity
+  character.velocityY += character.gravity;
+  
+  // Apply drag
+  character.velocityX *= character.drag;
+  character.velocityY *= character.drag;
+  
+  // Update position
+  character.x += character.velocityX;
+  character.y += character.velocityY;
+  
+  // Bounce off side walls
+  if (character.x <= 0) {
+    character.x = 0;
+    character.velocityX = Math.abs(character.velocityX) * character.bounce;
+  } else if (character.x >= window.innerWidth - 60) {
+    character.x = window.innerWidth - 60;
+    character.velocityX = -Math.abs(character.velocityX) * character.bounce;
+  }
+  
+  // Check if hit ground or target
+  if (character.y >= window.innerHeight - 200) {
+    character.y = window.innerHeight - 200;
+    character.velocityY = -character.velocityY * character.bounce * 0.5;
+    character.velocityX *= 0.8; // Reduce horizontal movement on ground bounce
+    
+    // Check for target hit
+    if (!character.hit) {
+      checkHit(character);
+    }
+    
+    // Stop bouncing if velocity is too low
+    if (Math.abs(character.velocityY) < 0.1 && Math.abs(character.velocityX) < 0.1) {
+      setTimeout(() => {
+        removeCharacter(character);
+      }, 2000);
+      return;
+    }
+  }
+  
+  // Update visual position
+  character.element.style.left = character.x + 'px';
+  character.element.style.top = character.y + 'px';
+  
+  // Continue animation if character is still on screen
+  if (character.y < window.innerHeight + 100) {
+    character.animationId = requestAnimationFrame(() => animateCharacter(character));
+  } else {
+    removeCharacter(character);
+  }
+}
+
+// Remove character from game
+function removeCharacter(character) {
+  if (character.animationId) {
+    cancelAnimationFrame(character.animationId);
+  }
+  
+  if (character.element && character.element.parentNode) {
+    character.element.parentNode.removeChild(character.element);
+  }
+  
+  // Remove from array
+  const index = fallingCharacters.indexOf(character);
+  if (index > -1) {
+    fallingCharacters.splice(index, 1);
+  }
 }
 
 // Check if character hit the target
@@ -1296,6 +1429,88 @@ clearTtsHistoryBtn.addEventListener('click', () => {
   ttsHistory = [];
   updateTtsHistoryUI();
 });
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', () => {
+  // Check for OBS overlay mode
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get('obs') === 'true') {
+    // Enable overlay mode
+    document.documentElement.setAttribute('data-theme', 'overlay');
+    themeSelect.value = 'overlay';
+    
+    // Hide main container and show only game overlay
+    document.querySelector('.container').style.display = 'none';
+    document.getElementById('game-overlay').classList.add('active');
+    
+    // Auto-enable game
+    gameEnabled = true;
+    gameToggle.checked = true;
+    initializeGame();
+    
+    // Make body transparent
+    document.body.style.background = 'transparent';
+  }
+  
+  // Generate OBS URL and show it
+  updateObsUrl();
+});
+
+function updateObsUrl() {
+  const currentUrl = window.location.href.split('?')[0];
+  const obsUrl = `${currentUrl}?obs=true`;
+  
+  // Create or update OBS URL display
+  let obsUrlDisplay = document.getElementById('obs-url-display');
+  if (!obsUrlDisplay) {
+    obsUrlDisplay = document.createElement('div');
+    obsUrlDisplay.id = 'obs-url-display';
+    obsUrlDisplay.style.marginTop = '10px';
+    obsUrlDisplay.style.padding = '10px';
+    obsUrlDisplay.style.background = 'var(--chat-bg)';
+    obsUrlDisplay.style.border = '1px solid var(--border-color)';
+    obsUrlDisplay.style.borderRadius = '4px';
+    obsUrlDisplay.style.fontSize = '0.9em';
+    
+    const label = document.createElement('strong');
+    label.textContent = 'OBS Browser Source URL: ';
+    obsUrlDisplay.appendChild(label);
+    
+    const urlInput = document.createElement('input');
+    urlInput.type = 'text';
+    urlInput.readOnly = true;
+    urlInput.value = obsUrl;
+    urlInput.style.width = '100%';
+    urlInput.style.marginTop = '5px';
+    urlInput.style.padding = '5px';
+    urlInput.style.background = 'var(--container-bg)';
+    urlInput.style.color = 'var(--text-color)';
+    urlInput.style.border = '1px solid var(--border-color)';
+    urlInput.style.borderRadius = '4px';
+    urlInput.style.fontSize = '0.9em';
+    
+    const copyBtn = document.createElement('button');
+    copyBtn.textContent = 'Copy URL';
+    copyBtn.style.marginTop = '5px';
+    copyBtn.style.padding = '5px 10px';
+    copyBtn.style.fontSize = '0.9em';
+    copyBtn.onclick = () => {
+      urlInput.select();
+      document.execCommand('copy');
+      copyBtn.textContent = 'Copied!';
+      setTimeout(() => {
+        copyBtn.textContent = 'Copy URL';
+      }, 2000);
+    };
+    
+    obsUrlDisplay.appendChild(urlInput);
+    obsUrlDisplay.appendChild(copyBtn);
+    
+    // Insert after game controls
+    const gameControls = document.querySelector('.game-controls');
+    gameControls.appendChild(obsUrlDisplay);
+  }
+}
 
 // Global error handler for unhandled promise rejections
 window.addEventListener('unhandledrejection', function(event) {
