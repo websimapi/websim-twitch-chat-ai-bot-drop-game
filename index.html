@@ -1,0 +1,574 @@
+<html>
+<head>
+  <title>Twitch Chat AI Bot & Drop Game</title>
+  <style>
+    :root {
+      /* Light theme (default) */
+      --bg-color: #f0f0f0;
+      --container-bg: white;
+      --text-color: #333;
+      --border-color: #ddd;
+      --primary-color: #6441A4;
+      --primary-hover: #7454B3;
+      --chat-bg: #fff;
+      --username-color: #6441A4;
+      --bot-username-color: #2ecc71;
+      --timestamp-color: #666;
+      --status-connected-bg: #d4edda;
+      --status-connected-text: #155724;
+      --status-disconnected-bg: #f8d7da;
+      --status-disconnected-text: #721c24;
+    }
+
+    /* Game overlay theme */
+    [data-theme="overlay"] {
+      --bg-color: transparent;
+      --container-bg: rgba(0, 0, 0, 0.8);
+      --text-color: #fff;
+      --border-color: rgba(255, 255, 255, 0.3);
+      --primary-color: #9147ff;
+      --primary-hover: #a970ff;
+      --chat-bg: rgba(0, 0, 0, 0.7);
+      --username-color: #9147ff;
+      --bot-username-color: #00d4aa;
+      --timestamp-color: #ccc;
+      --status-connected-bg: rgba(27, 94, 32, 0.8);
+      --status-connected-text: #c8e6c9;
+      --status-disconnected-bg: rgba(198, 40, 40, 0.8);
+      --status-disconnected-text: #ffcdd2;
+    }
+
+    [data-theme="dark"] {
+      --bg-color: #1a1a1a;
+      --container-bg: #2d2d2d;
+      --text-color: #fff;
+      --border-color: #444;
+      --primary-color: #9147ff;
+      --primary-hover: #a970ff;
+      --chat-bg: #1e1e1e;
+      --username-color: #9147ff;
+      --bot-username-color: #00d4aa;
+      --timestamp-color: #aaa;
+      --status-connected-bg: #1b5e20;
+      --status-connected-text: #c8e6c9;
+      --status-disconnected-bg: #c62828;
+      --status-disconnected-text: #ffcdd2;
+    }
+
+    [data-theme="purple"] {
+      --bg-color: #2d1b69;
+      --container-bg: #3d2b79;
+      --text-color: #e8e8ff;
+      --border-color: #5d4b99;
+      --primary-color: #8b5cf6;
+      --primary-hover: #a78bfa;
+      --chat-bg: #1e1135;
+      --username-color: #a78bfa;
+      --bot-username-color: #34d399;
+      --timestamp-color: #c4b5fd;
+      --status-connected-bg: #059669;
+      --status-connected-text: #d1fae5;
+      --status-disconnected-bg: #dc2626;
+      --status-disconnected-text: #fecaca;
+    }
+
+    [data-theme="neon"] {
+      --bg-color: #0a0a0a;
+      --container-bg: #111;
+      --text-color: #00ff41;
+      --border-color: #00ff41;
+      --primary-color: #ff0080;
+      --primary-hover: #ff3399;
+      --chat-bg: #050505;
+      --username-color: #00ffff;
+      --bot-username-color: #ffff00;
+      --timestamp-color: #00ff41;
+      --status-connected-bg: #00ff41;
+      --status-connected-text: #000;
+      --status-disconnected-bg: #ff0080;
+      --status-disconnected-text: #000;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: var(--bg-color);
+      color: var(--text-color);
+      transition: background-color 0.3s, color 0.3s;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: var(--container-bg);
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .theme-selector {
+      margin-bottom: 20px;
+      padding: 10px;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .theme-selector label {
+      font-weight: bold;
+    }
+
+    .theme-selector select {
+      padding: 5px;
+      background: var(--container-bg);
+      color: var(--text-color);
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+    }
+
+    #connect-form, #bot-config {
+      margin-bottom: 20px;
+      padding: 15px;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+    }
+
+    #channel-input, #bot-context {
+      padding: 8px;
+      font-size: 16px;
+      border: 2px solid var(--primary-color);
+      border-radius: 4px;
+      margin-right: 10px;
+      width: 200px;
+      background: var(--container-bg);
+      color: var(--text-color);
+    }
+
+    #bot-context {
+      width: 100%;
+      height: 100px;
+      margin-bottom: 10px;
+      resize: vertical;
+    }
+
+    button {
+      padding: 8px 16px;
+      font-size: 16px;
+      background: var(--primary-color);
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-right: 10px;
+    }
+
+    button:hover {
+      background: var(--primary-hover);
+    }
+
+    button.disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+
+    button.speech-control {
+      background: #d4322c;
+      margin-left: 10px;
+    }
+
+    button.speech-control:hover {
+      background: #f54942;
+    }
+
+    button.popout-btn {
+      background: #17a2b8;
+      margin-left: 10px;
+    }
+
+    button.popout-btn:hover {
+      background: #138496;
+    }
+
+    #chat-box {
+      height: 500px;
+      overflow-y: auto;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      padding: 10px;
+      background: var(--chat-bg);
+    }
+
+    .chat-message {
+      padding: 4px 0;
+      word-wrap: break-word;
+    }
+
+    .username {
+      font-weight: bold;
+      color: var(--username-color);
+    }
+
+    .bot-message .username {
+      color: var(--bot-username-color);
+    }
+
+    .timestamp {
+      color: var(--timestamp-color);
+      font-size: 0.8em;
+      margin-right: 5px;
+    }
+
+    .status {
+      margin: 10px 0;
+      padding: 10px;
+      border-radius: 4px;
+    }
+
+    .status.connected {
+      background: var(--status-connected-bg);
+      color: var(--status-connected-text);
+    }
+
+    .status.disconnected {
+      background: var(--status-disconnected-bg);
+      color: var(--status-disconnected-text);
+    }
+
+    .controls {
+      display: flex;
+      gap: 10px;
+      margin: 10px 0;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    #volume-control {
+      width: 100px;
+    }
+
+    .toggle-switch {
+      position: relative;
+      display: inline-block;
+      width: 60px;
+      height: 34px;
+    }
+
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #ccc;
+      transition: .4s;
+      border-radius: 34px;
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 26px;
+      width: 26px;
+      left: 4px;
+      bottom: 4px;
+      background-color: white;
+      transition: .4s;
+      border-radius: 50%;
+    }
+
+    input:checked + .slider {
+      background-color: var(--primary-color);
+    }
+
+    input:checked + .slider:before {
+      transform: translateX(26px);
+    }
+
+    /* Game overlay styles */
+    #game-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      pointer-events: none;
+      z-index: 1000;
+      display: none;
+    }
+
+    #game-overlay.active {
+      display: block;
+    }
+
+    .game-target {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 120px;
+      height: 120px;
+      background: radial-gradient(circle, #ff6b6b 0%, #ff5252 30%, #f44336 60%, #d32f2f 100%);
+      border-radius: 50%;
+      border: 6px solid #fff;
+      box-shadow: 0 0 20px rgba(255, 107, 107, 0.6), inset 0 0 20px rgba(255, 255, 255, 0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      font-weight: bold;
+      color: white;
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+    }
+
+    .game-target::before {
+      content: '';
+      position: absolute;
+      width: 80px;
+      height: 80px;
+      background: radial-gradient(circle, #ffeb3b 0%, #ffc107 50%, #ff9800 100%);
+      border-radius: 50%;
+      border: 3px solid #fff;
+    }
+
+    .game-target::after {
+      content: '';
+      position: absolute;
+      width: 40px;
+      height: 40px;
+      background: radial-gradient(circle, #fff 0%, #f5f5f5 100%);
+      border-radius: 50%;
+      border: 2px solid #333;
+      z-index: 1;
+    }
+
+    .falling-character {
+      position: absolute;
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, #ff9800 0%, #ff5722 100%);
+      border-radius: 50%;
+      border: 3px solid #fff;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      color: white;
+      text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+      animation: fall linear forwards;
+      z-index: 999;
+    }
+
+    .falling-character::before {
+      content: '🎯';
+      font-size: 20px;
+    }
+
+    @keyframes fall {
+      from {
+        transform: translateY(-100px) rotate(0deg);
+      }
+      to {
+        transform: translateY(100vh) rotate(360deg);
+      }
+    }
+
+    .score-popup {
+      position: fixed;
+      font-size: 32px;
+      font-weight: bold;
+      color: #4caf50;
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+      z-index: 1001;
+      pointer-events: none;
+      animation: scorePopup 2s ease-out forwards;
+    }
+
+    @keyframes scorePopup {
+      0% {
+        opacity: 1;
+        transform: scale(1);
+      }
+      50% {
+        opacity: 1;
+        transform: scale(1.5);
+      }
+      100% {
+        opacity: 0;
+        transform: scale(1) translateY(-100px);
+      }
+    }
+
+    .game-controls {
+      margin-bottom: 20px;
+      padding: 15px;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+    }
+
+    .game-stats {
+      display: flex;
+      gap: 20px;
+      margin-bottom: 10px;
+    }
+
+    .stat-item {
+      padding: 5px 10px;
+      background: var(--chat-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Twitch Chat AI Bot & Drop Game</h1>
+    
+    <div class="theme-selector">
+      <label for="theme-select">Theme:</label>
+      <select id="theme-select">
+        <option value="light">Light</option>
+        <option value="dark">Dark</option>
+        <option value="purple">Purple</option>
+        <option value="neon">Neon</option>
+        <option value="overlay">Overlay (OBS)</option>
+      </select>
+    </div>
+
+    <div class="game-controls">
+      <h3>Drop Game Controls</h3>
+      <div class="controls">
+        <label class="toggle-switch">
+          <input type="checkbox" id="game-enabled">
+          <span class="slider"></span>
+        </label>
+        <span>Game Active</span>
+        <button id="reset-game">Reset Game</button>
+        <button id="toggle-overlay">Toggle Overlay</button>
+      </div>
+      <div class="game-stats">
+        <div class="stat-item">Drops: <span id="drop-count">0</span></div>
+        <div class="stat-item">Hits: <span id="hit-count">0</span></div>
+        <div class="stat-item">Score: <span id="game-score">0</span></div>
+        <div class="stat-item">Accuracy: <span id="accuracy">0%</span></div>
+      </div>
+    </div>
+    
+    <div id="connect-form">
+      <input type="text" id="channel-input" placeholder="Enter channel name">
+      <button id="connect-btn">Connect</button>
+    </div>
+
+    <div id="bot-config">
+      <h3>Bot Configuration</h3>
+      <textarea id="bot-context" placeholder="Enter the AI bot's context/personality here..."></textarea>
+      <div class="controls">
+        <label class="toggle-switch">
+          <input type="checkbox" id="bot-enabled">
+          <span class="slider"></span>
+        </label>
+        <span>Bot Active</span>
+        <label>
+          <input type="range" id="volume-control" min="0" max="1" step="0.1" value="0.5">
+          TTS Volume
+        </label>
+        <label>
+          Voice:
+          <select id="voice-select">
+            <option value="en-male">English Male</option>
+            <option value="en-female">English Female</option>
+            <option value="es-male">Spanish Male</option>
+            <option value="es-female">Spanish Female</option>
+            <option value="fr-male">French Male</option>
+            <option value="fr-female">French Female</option>
+            <option value="de-male">German Male</option>
+            <option value="de-female">German Female</option>
+            <option value="it-male">Italian Male</option>
+            <option value="it-female">Italian Female</option>
+            <option value="pt-male">Portuguese Male</option>
+            <option value="pt-female">Portuguese Female</option>
+            <option value="ru-male">Russian Male</option>
+            <option value="ru-female">Russian Female</option>
+            <option value="zh-male">Chinese Male</option>
+            <option value="zh-female">Chinese Female</option>
+            <option value="ko-male">Korean Male</option>
+            <option value="ko-female">Korean Female</option>
+            <option value="hi-male">Hindi Male</option>
+            <option value="hi-female">Hindi Female</option>
+          </select>
+        </label>
+        <label class="toggle-switch">
+          <input type="checkbox" id="advanced-tts">
+          <span class="slider"></span>
+        </label>
+        <span>Advanced TTS</span>
+        <div id="advanced-tts-options" style="display: none;">
+          <label>
+            <input type="radio" name="advanced-mode" value="models" id="advanced-models" checked>
+            Advanced Models
+          </label>
+          <label>
+            <input type="radio" name="advanced-mode" value="clone" id="voice-clone">
+            Voice Clone
+          </label>
+        </div>
+        <label id="voice-file-label" style="display: none;">
+          Voice Clone:
+          <input type="file" id="voice-file" accept=".wav,.mp3" style="width: 150px;">
+        </label>
+        <button id="stop-speech" class="speech-control">Stop Speech</button>
+        <button id="popout-chat" class="popout-btn">Pop-out Chat</button>
+      </div>
+    </div>
+
+    <div id="status" class="status"></div>
+    
+    <div id="tts-monitor">
+      <h3>Text-to-Speech Monitor</h3>
+      <div class="tts-controls">
+        <button id="clear-tts-history" class="tts-btn">Clear History</button>
+        <span id="tts-status">Idle</span>
+      </div>
+      <div id="tts-queue-section">
+        <h4>Queue (<span id="queue-count">0</span>)</h4>
+        <div id="tts-queue"></div>
+      </div>
+      <div id="tts-history-section">
+        <h4>History</h4>
+        <div id="tts-history"></div>
+      </div>
+    </div>
+    
+    <div id="chat-box"></div>
+  </div>
+
+  <!-- Game Overlay -->
+  <div id="game-overlay">
+    <div class="game-target">
+      <span style="position: relative; z-index: 2;">TARGET</span>
+    </div>
+  </div>
+
+  <script src="tmi.js"></script>
+  <script type="importmap">
+  {
+    "imports": {
+      "tmi.js": "./tmi.js"
+    }
+  }
+  </script>
+  <script src="chat.js"></script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"4c6229722a6346bc8eb5cb0e5eae5d41","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+</body>
+</html>
